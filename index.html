@@ -757,6 +757,10 @@ body::before{
 </svg>
         <div class="pin-brand-text">Sanken Overseas<small>Authorised Access</small></div>
       </div>
+      <div id="js-blocked-warning" style="background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.3); color:var(--red); border-radius:12px; padding:14px; font-size:12px; font-weight:600; margin-bottom:20px; text-align:center; line-height:1.5;">
+        ⚠️ JavaScript is Blocked by your Browser for local files.<br>
+        <span style="font-weight:400; color:var(--muted2); font-size:11px; display:inline-block; margin-top:6px;">Please open the page in **Chrome Incognito Mode** or push the code to your **GitHub repository** to run it live.</span>
+      </div>
       <div class="pin-title">Enter Access Code</div>
       <div class="pin-sub">Tap the numbers below</div>
       <div class="pin-err" id="pin-err">Incorrect code — try again</div>
@@ -1010,7 +1014,7 @@ body::before{
                     <input class="add-inp" id="gh-token-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" style="flex:1; margin-bottom:0; font-size:13px;">
                     <button type="button" class="add-sub" onclick="handleSaveToken()" style="flex:0; width:auto; padding:0 16px; font-size:11px; border-radius:8px; margin-bottom:0;">Save</button>
                   </div>
-                  <div style="font-size:9px; color:var(--muted2); margin-top:6px; line-height:1.4;">Enter a fine-grained token with "contents: read & write" access to skoherath-debug/qr-systemsko.</div>
+                  <div style="font-size:9px; color:var(--muted2); margin-top:6px; line-height:1.4;">Enter a fine-grained token with "contents: read & write" access to ebiz1986-commits/SO-QR-Asset-Management-2.1.</div>
                 </div>
 
                 <!-- Saved Token state UI -->
@@ -1135,11 +1139,47 @@ body::before{
 
 <script>
 'use strict';
+// Hide JS blocked warning immediately on script execution
+try {
+  var w = document.getElementById('js-blocked-warning');
+  if (w) w.style.display = 'none';
+} catch(e) {}
+
+alert("JavaScript is executing successfully!");
+window.onerror = function(message, source, lineno, colno, error) {
+  alert("JavaScript Error Detected:\n\nMessage: " + message + "\nLine: " + lineno + "\nFile: " + source);
+  return false;
+};
 // ── CONSTANTS ──────────────────────────────────────────────────────────────────
 var GH_FIXED_TOKEN = ''; // Enter token in Admin Panel — never embed in code // embedded // embedded
 var AK  = 'so_auth_v10';
 var SK  = 'so_scans_v5';
 var _AP = String.fromCharCode(57,56,55,54);
+
+// ── SAFE LOCAL STORAGE HELPERS ──────────────────────────────────────────────────
+function getLocal(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+function setLocal(key, val) {
+  try {
+    localStorage.setItem(key, val);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+function removeLocal(key) {
+  try {
+    localStorage.removeItem(key);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
 var users   = [];
@@ -1283,9 +1323,15 @@ var THEMES = [
 ];
 
 window.applyTheme = function(themeId, fromCloud) {
-  var tItem = THEMES.find(function(t) { return t.id === themeId; });
+  var tItem = null;
+  for (var i = 0; i < THEMES.length; i++) {
+    if (THEMES[i].id === themeId) {
+      tItem = THEMES[i];
+      break;
+    }
+  }
   if (!tItem) return;
-  localStorage.setItem('so_asset_theme', themeId);
+  setLocal('so_asset_theme', themeId);
   Object.keys(tItem.vars).forEach(function(key) {
     document.documentElement.style.setProperty(key, tItem.vars[key]);
   });
@@ -1296,7 +1342,7 @@ window.applyTheme = function(themeId, fromCloud) {
 };
 
 window.initTheme = function() {
-  var saved = localStorage.getItem('so_asset_theme') || 'classic';
+  var saved = getLocal('so_asset_theme') || 'classic';
   applyTheme(saved);
 };
 
@@ -1320,7 +1366,7 @@ window.closeThemeSheet = function() {
 window.renderThemeOptions = function() {
   var container = document.getElementById('theme-options-container');
   if (!container) return;
-  var activeThemeId = localStorage.getItem('so_asset_theme') || 'classic';
+  var activeThemeId = getLocal('so_asset_theme') || 'classic';
   var html = '';
   THEMES.forEach(function(theme) {
     var isSelected = theme.id === activeThemeId;
@@ -1345,15 +1391,14 @@ initTheme();
 
 // ── INIT ───────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() {
-  loadUsers();
-  loadSites();
-  checkUrlHash();   // auto-import users from share link
-  // Load cloud config on page open so operator PINs are ready before login
-  autoLoadConfig();
+  try { loadUsers(); } catch(e) { console.error("loadUsers failed:", e); }
+  try { loadSites(); } catch(e) { console.error("loadSites failed:", e); }
+  try { checkUrlHash(); } catch(e) { console.error("checkUrlHash failed:", e); }
+  try { autoLoadConfig(); } catch(e) { console.error("autoLoadConfig failed:", e); }
 
   // Periodic live background database synchronization (silent mode, every 15 seconds)
   setInterval(function() {
-    autoLoadConfig(true);
+    try { autoLoadConfig(true); } catch(e) {}
   }, 15000);
 
 
@@ -1451,7 +1496,7 @@ function checkUrlHash() {
         users.push(u); changed = true;
       }
     });
-    if (changed) { localStorage.setItem(AK, JSON.stringify(users)); }
+    if (changed) { setLocal(AK, JSON.stringify(users)); }
     if (importedSites.length) {
       importedSites.forEach(function(s) { if (sitesList.indexOf(s) === -1) sitesList.push(s); });
       saveSites();
@@ -1462,21 +1507,21 @@ function checkUrlHash() {
 }
 
 // ── CLOUD SYNC ───────────────────────────────────────────────────────
-var CLOUD_READ_API='https://api.github.com/repos/skoherath-debug/qr-systemsko/contents/so-config.json';
-var CLOUD_READ='https://raw.githubusercontent.com/skoherath-debug/qr-systemsko/main/so-config.json';
-var CLOUD_WRITE='https://api.github.com/repos/skoherath-debug/qr-systemsko/contents/so-config.json';
-var SCANS_READ_API='https://api.github.com/repos/skoherath-debug/qr-systemsko/contents/so-scans.json';
-var SCANS_WRITE='https://api.github.com/repos/skoherath-debug/qr-systemsko/contents/so-scans.json';
+var CLOUD_READ_API='https://api.github.com/repos/ebiz1986-commits/SO-QR-Asset-Management-2.1/contents/so-config.json';
+var CLOUD_READ='https://raw.githubusercontent.com/ebiz1986-commits/SO-QR-Asset-Management-2.1/main/so-config.json';
+var CLOUD_WRITE='https://api.github.com/repos/ebiz1986-commits/SO-QR-Asset-Management-2.1/contents/so-config.json';
+var SCANS_READ_API='https://api.github.com/repos/ebiz1986-commits/SO-QR-Asset-Management-2.1/contents/so-scans.json';
+var SCANS_WRITE='https://api.github.com/repos/ebiz1986-commits/SO-QR-Asset-Management-2.1/contents/so-scans.json';
 var GH_TOKEN_KEY='so_gh_token';
 var ghToken='';
-function ghTok(){if(!ghToken)ghToken=GH_FIXED_TOKEN||localStorage.getItem(GH_TOKEN_KEY)||'';return ghToken;}
+function ghTok(){if(!ghToken)ghToken=GH_FIXED_TOKEN||getLocal(GH_TOKEN_KEY)||'';return ghToken;}
 function saveGhToken(tok) {
   var clean = (tok || '').trim();
-  localStorage.setItem(GH_TOKEN_KEY, clean);
+  setLocal(GH_TOKEN_KEY, clean);
   ghToken = clean;
 }
 function clearGhToken() {
-  localStorage.removeItem(GH_TOKEN_KEY);
+  removeLocal(GH_TOKEN_KEY);
   ghToken = '';
 }
 
@@ -1581,10 +1626,10 @@ function pushConfigToGitHub(isSilent) {
   var cfg = {
     users: users.filter(function(u){ return !u.isAdmin; }),
     sites: sitesList,
-    theme: localStorage.getItem('so_asset_theme') || 'classic'
+    theme: getLocal('so_asset_theme') || 'classic'
   };
 
-  var syncMode = localStorage.getItem('so_sync_mode');
+  var syncMode = getLocal('so_sync_mode');
   if (syncMode === 'github' && ghTok()) {
     // GitHub API Mode
     fetch(CLOUD_READ_API, {
@@ -1670,7 +1715,7 @@ function autoLoadConfig(isSilent){
     showSyncBar('syncing', 'Syncing Data...', 0);
   }
 
-  var syncMode = localStorage.getItem('so_sync_mode');
+  var syncMode = getLocal('so_sync_mode');
   if (syncMode === 'github') {
     if (!ghTok()) {
       showSyncBar('err', 'Token Required');
@@ -1707,13 +1752,13 @@ function autoLoadConfig(isSilent){
           if (!merged.find(function(x){ return x.pin===cu.pin; })) merged.push(cu);
         });
         users = merged;
-        localStorage.setItem(AK, JSON.stringify(users));
+        setLocal(AK, JSON.stringify(users));
       }
       
       // Apply Sites Sync
       if (cfg && Array.isArray(cfg.sites)) {
         sitesList = cfg.sites;
-        localStorage.setItem(SITES_KEY, JSON.stringify(sitesList));
+        setLocal(SITES_KEY, JSON.stringify(sitesList));
         populateSiteDropdown();
       }
       
@@ -1768,13 +1813,13 @@ function autoLoadConfig(isSilent){
           if (!merged.find(function(x){ return x.pin===cu.pin; })) merged.push(cu);
         });
         users = merged;
-        localStorage.setItem(AK, JSON.stringify(users));
+        setLocal(AK, JSON.stringify(users));
       }
       
       // Apply Sites Sync
       if (Array.isArray(cfg.sites) && cfg.sites.length) {
         sitesList = cfg.sites;
-        localStorage.setItem(SITES_KEY, JSON.stringify(sitesList));
+        setLocal(SITES_KEY, JSON.stringify(sitesList));
         populateSiteDropdown();
       }
       
@@ -1823,7 +1868,7 @@ function syncUI(){}
 
 // ── DUAL MODE SYNC HELPERS ──
 window.setSyncMode = function(mode) {
-  localStorage.setItem('so_sync_mode', mode);
+  setLocal('so_sync_mode', mode);
   
   var btnServer = document.getElementById('sync-mode-server');
   var btnGithub = document.getElementById('sync-mode-github');
@@ -1902,9 +1947,9 @@ window.handleClearToken = function() {
 };
 
 window.initSync = function() {
-  var mode = localStorage.getItem('so_sync_mode');
+  var mode = getLocal('so_sync_mode');
   if (!mode) {
-    if (window.location.protocol === 'file:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'app.sankenoverseas.store')) {
+    if (window.location.protocol === 'file:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
       mode = 'github';
     } else {
       mode = 'server';
@@ -1915,7 +1960,7 @@ window.initSync = function() {
   // Setup smart background auto-sync polling every 30 seconds
   setInterval(function() {
     if (document.hidden) return; // Only sync when the user is actively viewing the tab to conserve bandwidth/battery
-    var activeMode = localStorage.getItem('so_sync_mode');
+    var activeMode = getLocal('so_sync_mode');
     if (activeMode === 'github' && !ghTok()) return; // GitHub mode active but no token entered yet
     autoLoadConfig(true); // Perform a silent auto-pull and merge of state
   }, 30000);
@@ -1927,7 +1972,7 @@ var sitesList = [];
 
 function loadSites() {
   try {
-    var stored = localStorage.getItem(SITES_KEY);
+    var stored = getLocal(SITES_KEY);
     sitesList = stored ? JSON.parse(stored) : [];
   } catch(e) {
     sitesList = [];
@@ -1940,7 +1985,7 @@ function loadSites() {
 }
 
 function saveSites() {
-  localStorage.setItem(SITES_KEY, JSON.stringify(sitesList));
+  setLocal(SITES_KEY, JSON.stringify(sitesList));
   silentPush();
 }
 
@@ -2011,7 +2056,7 @@ function removeSite(idx) {
 // ── USERS ──────────────────────────────────────────────────────────────────────
 function loadUsers() {
   try {
-    var stored = localStorage.getItem(AK);
+    var stored = getLocal(AK);
     users = stored ? JSON.parse(stored) : [];
   } catch(e) {
     users = [];
@@ -2021,9 +2066,9 @@ function loadUsers() {
   }
   users = users.filter(function(u) { return u && typeof u === 'object' && !u.isAdmin; });
   users.unshift({ name: 'Administrator', pin: _AP, role: 'Admin', isAdmin: true, addedAt: new Date().toISOString() });
-  localStorage.setItem(AK, JSON.stringify(users));
+  setLocal(AK, JSON.stringify(users));
 }
-function saveUsers() { localStorage.setItem(AK, JSON.stringify(users)); silentPush(); }
+function saveUsers() { setLocal(AK, JSON.stringify(users)); silentPush(); }
 
 
 // ── PIN PAD ────────────────────────────────────────────────────────────────────
@@ -2049,7 +2094,13 @@ function updateDots(err) {
 }
 function pinEnter() {
   if (!pinBuf) return;
-  var u = users.find(function(x) { return x.pin === pinBuf; });
+  var u = null;
+  for (var i = 0; i < users.length; i++) {
+    if (users[i] && users[i].pin === pinBuf) {
+      u = users[i];
+      break;
+    }
+  }
   if (!u) {
     updateDots(true);
     document.getElementById('pin-err').style.display = 'block';
@@ -2157,7 +2208,13 @@ function renderAdmin() {
 }
 
 function handleRemove(pin) {
-  var u = users.find(function(x) { return x.pin === pin; });
+  var u = null;
+  for (var i = 0; i < users.length; i++) {
+    if (users[i] && users[i].pin === pin) {
+      u = users[i];
+      break;
+    }
+  }
   if (!u || u.isAdmin) return;
   if (!confirm('Remove ' + u.name + '?')) return;
   users = users.filter(function(x) { return x.pin !== pin; });
@@ -2171,7 +2228,14 @@ function adminAdd() {
   if (!name)               { alert('Enter a name.'); return; }
   if (pin.length < 4)      { alert('Access code needs at least 4 digits.'); return; }
   if (pin === _AP)          { alert('That code is reserved.'); return; }
-  if (users.find(function(u) { return u.pin === pin; })) { alert('Code already in use — choose another.'); return; }
+  var duplicate = false;
+  for (var i = 0; i < users.length; i++) {
+    if (users[i] && users[i].pin === pin) {
+      duplicate = true;
+      break;
+    }
+  }
+  if (duplicate) { alert('Code already in use — choose another.'); return; }
   users.push({ name: name, pin: pin, role: role, isAdmin: false, addedAt: new Date().toISOString() });
   saveUsers();
   renderUsers();
@@ -2284,7 +2348,14 @@ window.generateAll = function() {
   })();
 };
 window.genSingle = function(id) {
-  var it = items.find(function(i) { return i.id === id; }); if (!it) return;
+  var it = null;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].id === id) {
+      it = items[i];
+      break;
+    }
+  }
+  if (!it) return;
   genQR(it, 800, function(ok) { if (ok) { var b = document.getElementById('iqr-'+id); if (b) b.innerHTML = '<img src="'+it.url+'" style="width:70px;height:70px">'; } updateStats(); });
 };
 
@@ -2320,7 +2391,14 @@ function renderCards() {
   if (!shown) grid.innerHTML = '<div class="no-items"><div style="font-size:30px;margin-bottom:8px;opacity:.4">&#128269;</div>No items match</div>';
 }
 function toggleSel(id) {
-  var it = items.find(function(i) { return i.id === id; }); if (!it) return;
+  var it = null;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].id === id) {
+      it = items[i];
+      break;
+    }
+  }
+  if (!it) return;
   it.sel = !it.sel;
   var c=document.getElementById('ic-'+id), k=document.getElementById('ck-'+id);
   if (c) c.classList.toggle('sel',it.sel); if (k) k.classList.toggle('on',it.sel);
@@ -2337,7 +2415,14 @@ function updateStats() {
 
 // ── QR PREVIEW ────────────────────────────────────────────────────────────────
 function viewQR(id) {
-  var it = items.find(function(i) { return i.id === id; }); if (!it) return;
+  var it = null;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].id === id) {
+      it = items[i];
+      break;
+    }
+  }
+  if (!it) return;
   qpItem = it;
   document.getElementById('qp-code').textContent = mkCode(it) + ' · ' + (document.getElementById('s-ship').value||'');
   document.getElementById('qp-desc').textContent = it.desc;
@@ -2443,7 +2528,13 @@ window.printOneByOne = function() {
   var idx=0; (function nx(){ if(idx>=sel.length)return; printOne(sel[idx].id,function(){idx++;setTimeout(nx,1500);}); })();
 };
 window.printOne = function(id, cb) {
-  var it = items.find(function(x){ return x.id===id; });
+  var it = null;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].id === id) {
+      it = items[i];
+      break;
+    }
+  }
   if (!it) { cb&&cb(); return; }
   var ship = document.getElementById('s-ship').value||'';
   var site = document.getElementById('s-site').value||'';
@@ -2481,7 +2572,18 @@ window.printOne = function(id, cb) {
 };
 
 // ── DOWNLOAD ──────────────────────────────────────────────────────────────────
-window.dlSingle = function(id) { var it=items.find(function(i){return i.id===id;}); if(!it)return; if(!it.gen) genQR(it,800,function(){dlF(it.url,mkCode(it)+'_QR.png');}); else dlF(it.url,mkCode(it)+'_QR.png'); };
+window.dlSingle = function(id) {
+  var it = null;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].id === id) {
+      it = items[i];
+      break;
+    }
+  }
+  if (!it) return;
+  if (!it.gen) genQR(it,800,function(){dlF(it.url,mkCode(it)+'_QR.png');});
+  else dlF(it.url,mkCode(it)+'_QR.png');
+};
 window.dlAll    = function() { var g=items.filter(function(i){return i.gen;}); if(!g.length){alert('Generate first.');return;} var idx=0; (function nx(){if(idx>=g.length)return;dlF(g[idx].url,mkCode(g[idx])+'_QR.png');idx++;setTimeout(nx,350);})(); };
 function dlF(url,name){var a=document.createElement('a');a.href=url;a.download=name;a.click();}
 

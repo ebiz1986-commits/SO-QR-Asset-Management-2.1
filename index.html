@@ -16,20 +16,20 @@
 
 <style>
 :root{
-  /* Brand palette — from logo diamonds */
-  --c0:#0a1628;      /* deep navy background */
-  --c1:#0f1f3d;      /* card background */
-  --c2:#162847;      /* elevated surface */
-  --c3:#1e3660;      /* border/hover */
-  --blue:#4a90d9;    /* primary — diamond mid */
-  --blue2:#7bbde8;   /* light diamond */
-  --blue3:#a8d4f0;   /* lightest diamond */
-  --bluedim:rgba(74,144,217,.12);
-  --blueborder:rgba(74,144,217,.28);
-  --accent:#38bdf8;  /* electric cyan accent */
-  --text:#e8f0fc;
-  --muted:#5c7499;
-  --muted2:#8ba4c8;
+  /* Premium Luxury Obsidian & Gold palette — default */
+  --c0:#0d0d0d;      /* deep dark obsidian background */
+  --c1:#171717;      /* card background */
+  --c2:#262626;      /* elevated surface */
+  --c3:#404040;      /* border/hover */
+  --blue:#d4af37;    /* primary — premium gold */
+  --blue2:#e5c158;   /* light gold */
+  --blue3:#f3e5ab;   /* lightest gold */
+  --bluedim:rgba(212,175,55,.12);
+  --blueborder:rgba(212,175,55,.28);
+  --accent:#f59e0b;  /* vibrant accent */
+  --text:#fafafa;
+  --muted:#737373;
+  --muted2:#a3a3a3;
   --border:rgba(255,255,255,.06);
   --green:#34d399;
   --red:#f87171;
@@ -1145,7 +1145,6 @@ try {
   if (w) w.style.display = 'none';
 } catch(e) {}
 
-alert("JavaScript is executing successfully!");
 window.onerror = function(message, source, lineno, colno, error) {
   alert("JavaScript Error Detected:\n\nMessage: " + message + "\nLine: " + lineno + "\nFile: " + source);
   return false;
@@ -1342,7 +1341,7 @@ window.applyTheme = function(themeId, fromCloud) {
 };
 
 window.initTheme = function() {
-  var saved = getLocal('so_asset_theme') || 'classic';
+  var saved = getLocal('so_asset_theme') || 'luxury';
   applyTheme(saved);
 };
 
@@ -1626,7 +1625,7 @@ function pushConfigToGitHub(isSilent) {
   var cfg = {
     users: users.filter(function(u){ return !u.isAdmin; }),
     sites: sitesList,
-    theme: getLocal('so_asset_theme') || 'classic'
+    theme: getLocal('so_asset_theme') || 'luxury'
   };
 
   var syncMode = getLocal('so_sync_mode');
